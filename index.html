@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>يحيى حماته – اهرب من الزحمة</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: #111827; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  #game-container { position: relative; width: 100%; max-width: 420px; height: 100vh; max-height: 780px; background: #1e293b; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.7); border-radius: 12px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.88); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; color: #fff; z-index: 10; }
+  h1 { font-size: 28px; color: #fbbf24; text-shadow: 0 3px 0 #b45309; margin-bottom: 8px; }
+  p { font-size: 15px; color: #e2e8f0; margin-bottom: 16px; }
+  .upload-box { background: #334155; border: 2px dashed #fbbf24; padding: 10px 15px; border-radius: 12px; cursor: pointer; margin-bottom: 18px; font-size: 13px; color: #fef08a; display: block; }
+  .upload-box input { display: none; }
+  .btn { background: linear-gradient(180deg, #22c55e, #15803d); color: white; border: none; padding: 14px 36px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 0 #14532d; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #14532d; }
+  #hud { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between; color: #fbbf24; font-size: 20px; font-weight: bold; text-shadow: 0 2px 4px #000; pointer-events: none; z-index: 5; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="hud">
+    <span id="score-display">🪙 0</span>
+    <span id="speed-display">⚡ 1x</span>
+  </div>
+
+  <div id="start-screen" class="overlay">
+    <h1>يحيى حماته<br>اهرب من الزحمة!</h1>
+    <p>اسحب يمين وشمال لتغيير الحارة، لفوق للنط، ولتحت للانبطاح</p>
+    <div style="margin-bottom: 15px; color: #a5f3fc; font-size: 14px;">جاهز! تم تحميل صورة يحيى تلقائياً (yahya_face.png) 👶✨</div>
+    <label class="upload-box">
+      📸 أو اختر صورة أخرى لوجه يحيى
+      <input type="file" id="face-upload" accept="image/*">
+    </label>
+    <button class="btn" id="start-btn">يلا نجري! 🚀</button>
+  </div>
+
+  <canvas id="gameCanvas" width="420" height="780"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startScreen = document.getElementById('start-screen');
+const startBtn = document.getElementById('start-btn');
+const scoreDisplay = document.getElementById('score-display');
+const speedDisplay = document.getElementById('speed-display');
+const faceUpload = document.getElementById('face-upload');
+
+// تحميل تلقائي لصورة يحيى من المجلد
+let faceImg = new Image();
+faceImg.src = 'yahya_face.png'; // الصورة التي ستقوم بتسميتها ووضعها في نفس المجلد
+faceImg.onerror = () => {
+  console.log("لم يتم العثور على yahya_face.png في المجلد، سيتم استخدام الوجه الافتراضي أو المرفوع.");
+};
+
+// إتاحة رفع صورة أخرى يدوياً
+faceUpload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const img = new Image();
+    img.onload = () => { faceImg = img; };
+    img.src = URL.createObjectURL(file);
+  }
+});
+
+const lanes = [100, 210, 320];
+let gameRunning = false;
+let score = 0;
+let speed = 6;
+let frame = 0;
+let audioCtx = null;
+let beatInterval = null;
+
+const player = {
+  lane: 1, x: lanes[1], y: 600,
+  jumpY: 0, vy: 0, isJumping: false,
+  slideTimer: 0
+};
+
+let obstacles = [];
+let coins = [];
+
+function startBeat() {
+  if (!window.AudioContext && !window.webkitAudioContext) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let step = 0;
+  // إيقاع مهرجانات مصري سريع تقريباً 130 BPM
+  beatInterval = setInterval(() => {
+    if (!gameRunning) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    if (step % 2 === 0) { // ضربات الطبل
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.12);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+    } else { // سينثيسايزر سريع
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(step % 4 === 1 ? 523.25 : 659.25, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+    }
+    osc.start(now);
+    osc.stop(now + 0.15);
+    step++;
+  }, 230); // 230ms ≈ 130 BPM
+}
+
+function resetGame() {
+  score = 0;
+  speed = 6.5;
+  frame = 0;
+  player.lane = 1;
+  player.x = lanes[1];
+  player.jumpY = 0;
+  player.vy = 0;
+  player.isJumping = false;
+  player.slideTimer = 0;
+  obstacles = [];
+  coins = [];
+  gameRunning = true;
+  startScreen.style.display = 'none';
+  if (beatInterval) clearInterval(beatInterval);
+  startBeat();
+  requestAnimationFrame(loop);
+}
+
+startBtn.addEventListener('click', resetGame);
+
+function moveLeft() { if (player.lane > 0) player.lane--; }
+function moveRight() { if (player.lane < 2) player.lane++; }
+function jump() { if (!player.isJumping) { player.vy = -15; player.isJumping = true; player.slideTimer = 0; } }
+function slide() { if (!player.isJumping) { player.slideTimer = 35; } }
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') moveRight(); // RTL توافق
+  if (e.key === 'ArrowRight') moveLeft();
+  if (e.key === 'ArrowUp' || e.key === ' ') jump();
+  if (e.key === 'ArrowDown') slide();
+});
+
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+canvas.addEventListener('touchend', (e) => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 30) moveRight();
+    else if (dx < -30) moveLeft();
+  } else {
+    if (dy < -30) jump();
+    else if (dy > 30) slide();
+  }
+});
+
+function spawnItems() {
+  if (frame % 55 === 0) {
+    const lane = Math.floor(Math.random() * 3);
+    const types = ['train', 'low_barrier', 'high_barrier'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    obstacles.push({ lane, x: lanes[lane], y: -100, type });
+  }
+  if (frame % 30 === 0) {
+    const lane = Math.floor(Math.random() * 3);
+    coins.push({ lane, x: lanes[lane], y: -40 });
+  }
+}
+
+function drawPlayer() {
+  player.x += (lanes[player.lane] - player.x) * 0.25;
+  if (player.isJumping) {
+    player.jumpY += player.vy;
+    player.vy += 0.85;
+    if (player.jumpY >= 0) { player.jumpY = 0; player.isJumping = false; }
+  }
+  if (player.slideTimer > 0) player.slideTimer--;
+
+  const isSliding = player.slideTimer > 0;
+  const py = player.y + player.jumpY + (isSliding ? 25 : 0);
+
+  ctx.save();
+  // ظل يحيى
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(player.x, player.y + 42, 24, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // جسم يحيى (التيشيرت والجاكيت الجينز الكحلي والبرتقالي)
+  ctx.fillStyle = '#3b82f6'; // لون تيشيرت يحيى
+  ctx.beginPath();
+  ctx.roundRect(player.x - 20, py - 10, 40, isSliding ? 22 : 34, 10);
+  ctx.fill();
+
+  // الجاكيت الجينز
+  ctx.fillStyle = '#1e3a8a';
+  ctx.fillRect(player.x - 24, py - 10, 8, isSliding ? 22 : 30);
+  ctx.fillRect(player.x + 16, py - 10, 8, isSliding ? 22 : 30);
+
+  // البنطلون الجينز والأحذية البرتقالية
+  if (!isSliding) {
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(player.x - 16, py + 20, 13, 16);
+    ctx.fillRect(player.x + 3, py + 20, 13, 16);
+    ctx.fillStyle = '#ea580c'; // الحذاء البرتقالي
+    ctx.fillRect(player.x - 18, py + 34, 15, 7);
+    ctx.fillRect(player.x + 3, py + 34, 15, 7);
+  }
+
+  // رأس يحيى الدائري المقصوص
+  const headY = py - 34;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(player.x, headY, 26, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+
+  // التحقق من وجود الصورة
+  if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
+    ctx.drawImage(faceImg, player.x - 26, headY - 26, 52, 52);
+  } else {
+    // وجه بديل كارتوني في حال تعذر تحميل الصورة
+    ctx.fillStyle = '#e0ac69';
+    ctx.fill();
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(player.x - 8, headY - 2, 4, 0, Math.PI * 2);
+    ctx.arc(player.x + 8, headY - 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#7c2d12';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(player.x, headY + 6, 8, 0, Math.PI);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.restore();
+}
+
+function loop() {
+  if (!gameRunning) return;
+  frame++;
+  speed = 6.5 + Math.floor(score / 10) * 0.4;
+  scoreDisplay.textContent = `🪙 ${score}`;
+  speedDisplay.textContent = `⚡ ${(speed / 6.5).toFixed(1)}x`;
+
+  // خلفية النفق والمترو
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // الحارات وخطوط السكك الحديدية
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 4;
+  lanes.forEach(lx => {
+    ctx.beginPath();
+    ctx.moveTo(lx - 35, 0); ctx.lineTo(lx - 35, canvas.height);
+    ctx.moveTo(lx + 35, 0); ctx.lineTo(lx + 35, canvas.height);
+    ctx.stroke();
+  });
+
+  spawnItems();
+
+  // عملات الذهب
+  for (let i = coins.length - 1; i >= 0; i--) {
+    const c = coins[i];
+    c.y += speed;
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    if (Math.hypot(c.x - player.x, c.y - (player.y + player.jumpY)) < 38) {
+      score++;
+      coins.splice(i, 1);
+    } else if (c.y > canvas.height + 30) {
+      coins.splice(i, 1);
+    }
+  }
+
+  // العقبات والمترو والحواجز
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    o.y += speed;
+
+    if (o.type === 'train') { // عربة مترو
+      ctx.fillStyle = '#ef4444';
+      ctx.roundRect(o.x - 36, o.y - 70, 72, 110, 10);
+      ctx.fill();
+      ctx.fillStyle = '#bae6fd';
+      ctx.fillRect(o.x - 26, o.y - 50, 52, 28);
+    } else if (o.type === 'low_barrier') { // حاجز منخفض يحتاج قفز
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(o.x - 34, o.y, 68, 24);
+    } else if (o.type === 'high_barrier') { // حاجز مرتفع يحتاج انبطاح
+      ctx.fillStyle = '#a855f7';
+      ctx.fillRect(o.x - 36, o.y - 45, 72, 35);
+    }
+
+    // فحص التصادم
+    if (o.lane === player.lane && Math.abs(o.y - player.y) < 34) {
+      const hitTrain = o.type === 'train';
+      const hitLow = o.type === 'low_barrier' && !player.isJumping;
+      const hitHigh = o.type === 'high_barrier' && player.slideTimer === 0;
+      if (hitTrain || hitLow || hitHigh) {
+        gameRunning = false;
+        if (beatInterval) clearInterval(beatInterval);
+        startScreen.style.display = 'flex';
+        startScreen.querySelector('h1').innerHTML = `حماة يحيى قفشته! 😅<br>جمعت ${score} عملة`;
+        startBtn.textContent = 'العب تاني 🔄';
+      }
+    }
+
+    if (o.y > canvas.height + 100) obstacles.splice(i, 1);
+  }
+
+  drawPlayer();
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
