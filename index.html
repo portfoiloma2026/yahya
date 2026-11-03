@@ -1,333 +1,253 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>يحيى حماته – اهرب من الزحمة</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1024">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>يحيى حماتة – اهرب من الزحمة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;800;900&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
-  body { background: #111827; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-  #game-container { position: relative; width: 100%; max-width: 420px; height: 100vh; max-height: 780px; background: #1e293b; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.7); border-radius: 12px; }
-  canvas { width: 100%; height: 100%; display: block; }
-  .overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.88); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; color: #fff; z-index: 10; }
-  h1 { font-size: 28px; color: #fbbf24; text-shadow: 0 3px 0 #b45309; margin-bottom: 8px; }
-  p { font-size: 15px; color: #e2e8f0; margin-bottom: 16px; }
-  .upload-box { background: #334155; border: 2px dashed #fbbf24; padding: 10px 15px; border-radius: 12px; cursor: pointer; margin-bottom: 18px; font-size: 13px; color: #fef08a; display: block; }
-  .upload-box input { display: none; }
-  .btn { background: linear-gradient(180deg, #22c55e, #15803d); color: white; border: none; padding: 14px 36px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 0 #14532d; }
-  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #14532d; }
-  #hud { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between; color: #fbbf24; font-size: 20px; font-weight: bold; text-shadow: 0 2px 4px #000; pointer-events: none; z-index: 5; }
+:root{--gold:#ffc93c;--bg:#0b1024}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#04060d;color:#fff;
+  font-family:"Tajawal","Segoe UI",Tahoma,Arial,sans-serif;touch-action:none;overscroll-behavior:none}
+#stage{position:absolute;top:0;left:50%;transform:translateX(-50%);background:var(--bg);overflow:hidden;
+  box-shadow:0 0 60px rgba(0,0,0,.6)}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+/* HUD */
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 0;pointer-events:none;z-index:5}
+#pills{display:flex;gap:8px}
+.pill{background:rgba(8,12,30,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:6px 14px;min-width:78px;text-align:center;line-height:1.1}
+.pill small{display:block;font-size:11px;opacity:.75;font-weight:500}
+.pill b{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.pill.gold b{color:var(--gold)}
+#btns{display:flex;gap:8px;pointer-events:auto}
+.icon{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.2);
+  background:rgba(8,12,30,.62);color:#fff;font-size:18px;cursor:pointer;font-family:inherit}
+.icon:active{transform:scale(.92)}
+#stage[data-mode=menu] #pills,#stage[data-mode=menu] #btnPause,
+#stage[data-mode=over] #btnPause,#stage[data-mode=pause] #btnPause{display:none}
+
+/* toast + hint */
+#toast{position:absolute;left:0;right:0;top:24%;text-align:center;font-size:32px;font-weight:900;color:#fff;
+  text-shadow:0 3px 0 rgba(0,0,0,.35),0 0 24px rgba(255,200,60,.7);opacity:0;pointer-events:none;z-index:6;padding:0 16px}
+#toast.show{animation:toast 1.4s ease-out both}
+@keyframes toast{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.12)}30%{transform:scale(1)}
+  80%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+#hint{position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);text-align:center;font-weight:800;
+  font-size:15px;background:rgba(8,12,30,.7);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:10px 12px;
+  opacity:0;pointer-events:none;z-index:6}
+#hint.show{animation:hint 4.5s ease both}
+@keyframes hint{0%{opacity:0;transform:translateY(10px)}10%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+
+/* screens */
+.screen{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:24px;text-align:center;
+  background:radial-gradient(ellipse at 50% 30%,rgba(25,40,95,.5),rgba(5,8,22,.88))}
+.hide{display:none!important}
+h1{margin:0;font-size:clamp(40px,12vw,64px);font-weight:900;line-height:1.05;
+  background:linear-gradient(180deg,#fff 20%,#ffd66b);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 0 rgba(0,0,0,.35))}
+h2{margin:0;font-size:clamp(22px,7vw,32px);font-weight:800;color:#8fd0ff;letter-spacing:.5px}
+#avatar{width:145px;height:145px;border-radius:50%;border:5px solid var(--gold);
+  background:radial-gradient(circle at 50% 35%,#4a7bd6,#1a2c66);box-shadow:0 10px 30px rgba(0,0,0,.45);animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(2deg)}}
+.best{margin:0;font-size:17px;opacity:.9}
+.best b{color:var(--gold)}
+.btn{font-family:inherit;font-weight:900;font-size:22px;border:0;border-radius:999px;padding:14px 38px;color:#fff;cursor:pointer;
+  min-width:230px;box-shadow:0 7px 0 rgba(0,0,0,.28),0 14px 30px rgba(0,0,0,.35);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(0,0,0,.28),0 6px 14px rgba(0,0,0,.35)}
+.btn.primary{background:linear-gradient(180deg,#ffd24a,#ff8a1f);color:#3a1e00}
+.btn.ghost{background:rgba(255,255,255,.12);font-size:18px;box-shadow:none;border:1px solid rgba(255,255,255,.25);padding:11px 30px}
+.links-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.link{font-size:14px;font-weight:800;color:#bfe3ff;cursor:pointer;padding:8px 12px;border-radius:12px;
+  background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.3)}
+.link.pulse{animation:pulse 1.2s ease-in-out infinite;color:#fff;border-color:var(--gold)}
+@keyframes pulse{50%{transform:scale(1.06);background:rgba(255,201,60,.22)}}
+.tips{margin:0;font-size:13px;line-height:1.65;opacity:.75}
+#photoMsg{margin:0;font-size:13px;color:var(--gold);min-height:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:340px}
+.stats div{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:10px 6px}
+.stats small{display:block;font-size:12px;opacity:.75}
+.stats b{font-size:24px;font-weight:900}
+.record{font-weight:900;font-size:20px;color:#3a1e00;background:linear-gradient(180deg,#ffe27a,#ffb02e);padding:6px 18px;border-radius:999px;
+  animation:pulse 1s ease-in-out infinite}
 </style>
 </head>
 <body>
+<div id="stage" data-mode="menu">
+  <canvas id="c"></canvas>
 
-<div id="game-container">
   <div id="hud">
-    <span id="score-display">🪙 0</span>
-    <span id="speed-display">⚡ 1x</span>
+    <div id="pills">
+      <div class="pill"><small>السكور</small><b id="score">0</b></div>
+      <div class="pill gold"><small>🪙 عملات</small><b id="coins">0</b></div>
+    </div>
+    <div id="btns">
+      <button class="icon" id="btnPause" aria-label="إيقاف مؤقت">⏸</button>
+      <button class="icon" id="btnTrack" aria-label="تغيير الأغنية" title="تغيير المهرجان">🎵</button>
+      <button class="icon" id="btnMute" aria-label="الصوت">🔊</button>
+    </div>
   </div>
 
-  <div id="start-screen" class="overlay">
-    <h1>يحيى حماته<br>اهرب من الزحمة!</h1>
-    <p>اسحب يمين وشمال لتغيير الحارة، لفوق للنط، ولتحت للانبطاح</p>
-    <div style="margin-bottom: 15px; color: #a5f3fc; font-size: 14px;">جاهز! تم تحميل صورة يحيى تلقائياً (yahya_face.png) 👶✨</div>
-    <label class="upload-box">
-      📸 أو اختر صورة أخرى لوجه يحيى
-      <input type="file" id="face-upload" accept="image/*">
-    </label>
-    <button class="btn" id="start-btn">يلا نجري! 🚀</button>
-  </div>
+  <div id="toast"></div>
+  <div id="hint">اسحب ⬅️➡️ للتحرك &nbsp;•&nbsp; ⬆️ نط &nbsp;•&nbsp; ⬇️ انبطح</div>
 
-  <canvas id="gameCanvas" width="420" height="780"></canvas>
+  <!-- الشاشة الرئيسية -->
+  <section id="menu" class="screen">
+    <canvas id="avatar" width="300" height="300"></canvas>
+    <h1>يحيى حماتة</h1>
+    <h2>اهرب من الزحمة</h2>
+    <p class="best">أعلى سكور: <b id="bestMenu">0</b></p>
+    <button class="btn primary" id="btnStart">يلا نجري! 🏃</button>
+    <div class="links-row">
+      <label class="link" id="photoLbl">📷 غيّر صورة يحيى<input id="file" type="file" accept="image/*" hidden></label>
+      <label class="link" id="audioLbl">🎵 اختار أغاني المهرجان<input id="audioFile" type="file" accept="audio/*" multiple hidden></label>
+    </div>
+    <p id="photoMsg"></p>
+    <p class="tips">اسحب يمين/شمال للتنقل • فوق للنط • تحت للانبطاح<br>كيبورد: الأسهم أو W A S D • زر 🎵 لتبديل المهرجان</p>
+  </section>
+
+  <!-- إيقاف مؤقت -->
+  <section id="pauseScr" class="screen hide">
+    <h1>استراحة ☕</h1>
+    <button class="btn primary" id="btnResume">كمّل</button>
+    <button class="btn ghost" id="btnHome2">الرئيسية</button>
+  </section>
+
+  <!-- نهاية الجولة -->
+  <section id="over" class="screen hide">
+    <h1 id="overTitle">اووه! 😵</h1>
+    <div class="stats">
+      <div><small>السكور</small><b id="oScore">0</b></div>
+      <div><small>🪙 عملات</small><b id="oCoins">0</b></div>
+      <div><small>أعلى سكور</small><b id="oBest">0</b></div>
+    </div>
+    <div id="record" class="record hide">🏆 رقم قياسي جديد!</div>
+    <button class="btn primary" id="btnAgain">العب تاني 🔁</button>
+    <button class="btn ghost" id="btnHome">الرئيسية</button>
+  </section>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const startScreen = document.getElementById('start-screen');
-const startBtn = document.getElementById('start-btn');
-const scoreDisplay = document.getElementById('score-display');
-const speedDisplay = document.getElementById('speed-display');
-const faceUpload = document.getElementById('face-upload');
+(() => {
+'use strict';
 
-// تحميل تلقائي لصورة يحيى من المجلد
-let faceImg = new Image();
-faceImg.src = 'yahya_face.png'; // الصورة التي ستقوم بتسميتها ووضعها في نفس المجلد
-faceImg.onerror = () => {
-  console.log("لم يتم العثور على yahya_face.png في المجلد، سيتم استخدام الوجه الافتراضي أو المرفوع.");
+/* ---------- أدوات مساعدة ---------- */
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const rndInt = (a, b) => Math.floor(rnd(a, b + 1));
+const pick = a => a[(Math.random() * a.length) | 0];
+const TAU = Math.PI * 2;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
 
-// إتاحة رفع صورة أخرى يدوياً
-faceUpload.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const img = new Image();
-    img.onload = () => { faceImg = img; };
-    img.src = URL.createObjectURL(file);
-  }
-});
+const stage = $('stage'), canvas =$('c'), ctx = canvas.getContext('2d');
 
-const lanes = [100, 210, 320];
-let gameRunning = false;
-let score = 0;
-let speed = 6;
-let frame = 0;
-let audioCtx = null;
-let beatInterval = null;
-
-const player = {
-  lane: 1, x: lanes[1], y: 600,
-  jumpY: 0, vy: 0, isJumping: false,
-  slideTimer: 0
+/* ---------- الإعدادات ---------- */
+const CFG = {
+  D: 18,
+  spawnZ: 110,
+  farZ: 420,
+  wallX: 2.6, tunnelH: 10,
+  speed0: 24, speedMax: 58, accel: 0.5,
+  gravity: 46, jumpV: 17.5, slideTime: 0.65, laneLerp: 15
 };
+const LANES = [-1, 0, 1];
+const CHEERS = ['يلا يا يحيى حماتة! 💪', 'على كوكبي أشطر صبي! 🌟', 'عدّى الزحمة! 🚇', 'برافو يا يحيى! 👏', 'داخل بسكيت! 🔥', 'كمّل يا وحش! 😎'];
+const OVER_TITLES = ['الزحمة وقفت يحيى حماتة! 😅', 'اووه! قفشتك الزحمة 😵', 'محاولة جامدة يا يحيى! 👏'];
+const TRAINS = [
+  { b: '#d9344b', s: '#9b2234', t: '#f06a7c', a: '#ffffff' },
+  { b: '#f4b400', s: '#b88400', t: '#ffd45c', a: '#2a2a2a' },
+  { b: '#1fa7a0', s: '#13726d', t: '#52d1ca', a: '#ffffff' },
+  { b: '#7b5cf0', s: '#5238b8', t: '#a58dff', a: '#ffffff' }
+];
 
-let obstacles = [];
-let coins = [];
+/* ---------- الحالة ---------- */
+const S = {
+  mode: 'menu', dist: 0, time: 0, speed: CFG.speed0, coins: 0, score: 0,
+  best: parseInt(store.get('yehia_best'), 10) || 0,
+  hue: 225, hueT: 225, nextZ: 42, objs: [], parts: [], shake: 0, runT: 0,
+  cheerAt: 300, deadT: 0, newBest: false, streak: 0, streakT: 0, overShown: false
+};
+const pl = { x: 0, tx: 0, lane: 0, y: 0, vy: 0, slide: 0, slideQ: false, bufJump: 0, rot: 0, dead: false, lean: 0 };
+let lastScore = -1, lastCoins = -1;
 
-function startBeat() {
-  if (!window.AudioContext && !window.webkitAudioContext) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  let step = 0;
-  // إيقاع مهرجانات مصري سريع تقريباً 130 BPM
-  beatInterval = setInterval(() => {
-    if (!gameRunning) return;
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    if (step % 2 === 0) { // ضربات الطبل
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(45, now + 0.12);
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-    } else { // سينثيسايزر سريع
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(step % 4 === 1 ? 523.25 : 659.25, now);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+/* ---------- المقاسات والمنظور ---------- */
+let W = 0, H = 0, dpr = 1, cx = 0, hy = 0, gy = 0, U = 0, LS = 0;
+function resize() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  W = Math.round(Math.min(vw, vh * 0.62)); H = vh;
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  stage.style.width = W + 'px'; stage.style.height = H + 'px';
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  cx = W / 2; hy = H * 0.40; gy = H * 0.80;
+  U = Math.min(W * 0.115, H * 0.062); LS = W * 0.26;
+}
+function P(x, y, z) {
+  const p = CFG.D / (CFG.D + z);
+  return { x: cx + x * LS * p, y: hy + (gy - hy) * p - y * U * p, p };
+}
+function poly(pts, fill) {
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+}
+const quad = (a, b, c, d, fill) => poly([a, b, c, d], fill);
+function line(a, b, col, w) {
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+  ctx.strokeStyle = col; ctx.lineWidth = w || 1; ctx.stroke();
+}
+function rr(x, y, w, h, r, fill) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+}
+function circle(x, y, r, fill) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = fill; ctx.fill(); }
+
+/* ---------- صورة يحيى (تدعم كل الأسماء المحتملة) ---------- */
+const face = { canvas: null, clip: false };
+
+function setFace(img) {
+  const SZ = 384, c = document.createElement('canvas');
+  c.width = c.height = SZ;
+  const g = c.getContext('2d');
+  const sc = Math.max(SZ / img.width, SZ / img.height);
+  const w = img.width * sc, h = img.height * sc;
+  g.drawImage(img, (SZ - w) / 2, (SZ - h) / 2, w, h);
+  face.clip = false;
+  try {
+    const id = g.getImageData(0, 0, SZ, SZ), d = id.data;
+    const seen = new Uint8Array(SZ * SZ), stack = [];
+    const isBg = i => d[i * 4 + 3] < 20 || (d[i * 4] > 238 && d[i * 4 + 1] > 238 && d[i * 4 + 2] > 238);
+    const push = i => { if (!seen[i] && isBg(i)) { seen[i] = 1; stack.push(i); } };
+    for (let x = 0; x < SZ; x++) { push(x); push((SZ - 1) * SZ + x); }
+    for (let y = 0; y < SZ; y++) { push(y * SZ); push(y * SZ + SZ - 1); }
+    while (stack.length) {
+      const i = stack.pop(), x = i % SZ;
+      if (x > 0) push(i - 1); if (x < SZ - 1) push(i + 1);
+      if (i >= SZ) push(i - SZ); if (i < SZ * (SZ - 1)) push(i + SZ);
     }
-    osc.start(now);
-    osc.stop(now + 0.15);
-    step++;
-  }, 230); // 230ms ≈ 130 BPM
-}
-
-function resetGame() {
-  score = 0;
-  speed = 6.5;
-  frame = 0;
-  player.lane = 1;
-  player.x = lanes[1];
-  player.jumpY = 0;
-  player.vy = 0;
-  player.isJumping = false;
-  player.slideTimer = 0;
-  obstacles = [];
-  coins = [];
-  gameRunning = true;
-  startScreen.style.display = 'none';
-  if (beatInterval) clearInterval(beatInterval);
-  startBeat();
-  requestAnimationFrame(loop);
-}
-
-startBtn.addEventListener('click', resetGame);
-
-function moveLeft() { if (player.lane > 0) player.lane--; }
-function moveRight() { if (player.lane < 2) player.lane++; }
-function jump() { if (!player.isJumping) { player.vy = -15; player.isJumping = true; player.slideTimer = 0; } }
-function slide() { if (!player.isJumping) { player.slideTimer = 35; } }
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft') moveRight(); // RTL توافق
-  if (e.key === 'ArrowRight') moveLeft();
-  if (e.key === 'ArrowUp' || e.key === ' ') jump();
-  if (e.key === 'ArrowDown') slide();
-});
-
-let touchStartX = 0, touchStartY = 0;
-canvas.addEventListener('touchstart', (e) => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-});
-canvas.addEventListener('touchend', (e) => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 30) moveRight();
-    else if (dx < -30) moveLeft();
-  } else {
-    if (dy < -30) jump();
-    else if (dy > 30) slide();
-  }
-});
-
-function spawnItems() {
-  if (frame % 55 === 0) {
-    const lane = Math.floor(Math.random() * 3);
-    const types = ['train', 'low_barrier', 'high_barrier'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    obstacles.push({ lane, x: lanes[lane], y: -100, type });
-  }
-  if (frame % 30 === 0) {
-    const lane = Math.floor(Math.random() * 3);
-    coins.push({ lane, x: lanes[lane], y: -40 });
-  }
-}
-
-function drawPlayer() {
-  player.x += (lanes[player.lane] - player.x) * 0.25;
-  if (player.isJumping) {
-    player.jumpY += player.vy;
-    player.vy += 0.85;
-    if (player.jumpY >= 0) { player.jumpY = 0; player.isJumping = false; }
-  }
-  if (player.slideTimer > 0) player.slideTimer--;
-
-  const isSliding = player.slideTimer > 0;
-  const py = player.y + player.jumpY + (isSliding ? 25 : 0);
-
-  ctx.save();
-  // ظل يحيى
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath();
-  ctx.ellipse(player.x, player.y + 42, 24, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // جسم يحيى (التيشيرت والجاكيت الجينز الكحلي والبرتقالي)
-  ctx.fillStyle = '#3b82f6'; // لون تيشيرت يحيى
-  ctx.beginPath();
-  ctx.roundRect(player.x - 20, py - 10, 40, isSliding ? 22 : 34, 10);
-  ctx.fill();
-
-  // الجاكيت الجينز
-  ctx.fillStyle = '#1e3a8a';
-  ctx.fillRect(player.x - 24, py - 10, 8, isSliding ? 22 : 30);
-  ctx.fillRect(player.x + 16, py - 10, 8, isSliding ? 22 : 30);
-
-  // البنطلون الجينز والأحذية البرتقالية
-  if (!isSliding) {
-    ctx.fillStyle = '#2563eb';
-    ctx.fillRect(player.x - 16, py + 20, 13, 16);
-    ctx.fillRect(player.x + 3, py + 20, 13, 16);
-    ctx.fillStyle = '#ea580c'; // الحذاء البرتقالي
-    ctx.fillRect(player.x - 18, py + 34, 15, 7);
-    ctx.fillRect(player.x + 3, py + 34, 15, 7);
-  }
-
-  // رأس يحيى الدائري المقصوص
-  const headY = py - 34;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(player.x, headY, 26, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.clip();
-
-  // التحقق من وجود الصورة
-  if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
-    ctx.drawImage(faceImg, player.x - 26, headY - 26, 52, 52);
-  } else {
-    // وجه بديل كارتوني في حال تعذر تحميل الصورة
-    ctx.fillStyle = '#e0ac69';
-    ctx.fill();
-    ctx.fillStyle = '#1f2937';
-    ctx.beginPath();
-    ctx.arc(player.x - 8, headY - 2, 4, 0, Math.PI * 2);
-    ctx.arc(player.x + 8, headY - 2, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#7c2d12';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(player.x, headY + 6, 8, 0, Math.PI);
-    ctx.stroke();
-  }
-  ctx.restore();
-  ctx.restore();
-}
-
-function loop() {
-  if (!gameRunning) return;
-  frame++;
-  speed = 6.5 + Math.floor(score / 10) * 0.4;
-  scoreDisplay.textContent = `🪙 ${score}`;
-  speedDisplay.textContent = `⚡ ${(speed / 6.5).toFixed(1)}x`;
-
-  // خلفية النفق والمترو
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // الحارات وخطوط السكك الحديدية
-  ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 4;
-  lanes.forEach(lx => {
-    ctx.beginPath();
-    ctx.moveTo(lx - 35, 0); ctx.lineTo(lx - 35, canvas.height);
-    ctx.moveTo(lx + 35, 0); ctx.lineTo(lx + 35, canvas.height);
-    ctx.stroke();
-  });
-
-  spawnItems();
-
-  // عملات الذهب
-  for (let i = coins.length - 1; i >= 0; i--) {
-    const c = coins[i];
-    c.y += speed;
-    ctx.fillStyle = '#fbbf24';
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, 13, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#d97706';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    if (Math.hypot(c.x - player.x, c.y - (player.y + player.jumpY)) < 38) {
-      score++;
-      coins.splice(i, 1);
-    } else if (c.y > canvas.height + 30) {
-      coins.splice(i, 1);
+    const edge = [];
+    for (let i = 0; i < SZ * SZ; i++) {
+      if (seen[i]) continue;
+      const x = i % SZ;
+      const nb = (x > 0 && seen[i - 1]) || (x < SZ - 1 && seen[i + 1]) || (i >= SZ && seen[i - SZ]) || (i < SZ * (SZ - 1) && seen[i + SZ]);
+      if (nb && d[i * 4] > 205 && d[i * 4 + 1] > 205 && d[i * 4 + 2] > 205) edge.push(i);
     }
-  }
-
-  // العقبات والمترو والحواجز
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    const o = obstacles[i];
-    o.y += speed;
-
-    if (o.type === 'train') { // عربة مترو
-      ctx.fillStyle = '#ef4444';
-      ctx.roundRect(o.x - 36, o.y - 70, 72, 110, 10);
-      ctx.fill();
-      ctx.fillStyle = '#bae6fd';
-      ctx.fillRect(o.x - 26, o.y - 50, 52, 28);
-    } else if (o.type === 'low_barrier') { // حاجز منخفض يحتاج قفز
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(o.x - 34, o.y, 68, 24);
-    } else if (o.type === 'high_barrier') { // حاجز مرتفع يحتاج انبطاح
-      ctx.fillStyle = '#a855f7';
-      ctx.fillRect(o.x - 36, o.y - 45, 72, 35);
-    }
-
-    // فحص التصادم
-    if (o.lane === player.lane && Math.abs(o.y - player.y) < 34) {
-      const hitTrain = o.type === 'train';
-      const hitLow = o.type === 'low_barrier' && !player.isJumping;
-      const hitHigh = o.type === 'high_barrier' && player.slideTimer === 0;
-      if (hitTrain || hitLow || hitHigh) {
-        gameRunning = false;
-        if (beatInterval) clearInterval(beatInterval);
-        startScreen.style.display = 'flex';
-        startScreen.querySelector('h1').innerHTML = `حماة يحيى قفشته! 😅<br>جمعت ${score} عملة`;
-        startBtn.textContent = 'العب تاني 🔄';
-      }
-    }
-
-    if (o.y > canvas.height + 100) obstacles.splice(i, 1);
-  }
-
-  drawPlayer();
-  requestAnimationFrame(loop);
-}
-</script>
-</body>
-</html>
+    for (let i = 0; i < SZ * SZ; i++) if (seen[i]) d[i * 4 + 3] = 0;
+    for (const i of edge) d[i * 4 + 3] = 0;
+    g.putImageData(id, 0, 0);
+  } catch
